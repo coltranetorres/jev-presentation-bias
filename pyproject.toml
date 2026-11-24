@@ -9,6 +9,7 @@ dependencies = [
     "pandas",
     "numpy",
     "matplotlib",
+    "tabulate>=0.10.0",
 ]
 
 [dependency-groups]

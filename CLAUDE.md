@@ -11,6 +11,7 @@ Plan: `docs/superpowers/plans/2026-11-24-jev-presentation-bias.md`
 - Tests: `uv run pytest`
 - Single test: `uv run pytest tests/test_client.py::test_name -v`
 - Full pipeline: `uv run python run_all.py [truthfulqa|mmlu_pro] [--n N]`
+- Combined chart: `uv run python combine_charts.py` (writes `results/combined_chart.png`)
 
 Use `uv` for everything (`uv add <pkg>`, `uv run ...`). Do not use pip or `requirements.txt`.
 

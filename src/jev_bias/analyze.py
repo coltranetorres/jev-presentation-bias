@@ -91,6 +91,50 @@ def make_chart(abs_df: pd.DataFrame, pair_df: pd.DataFrame, path: str = "results
     plt.close(fig)
 
 
+def make_combined_chart(datasets: dict[str, tuple[pd.DataFrame, pd.DataFrame]],
+                        path: str = "results/combined_chart.png") -> None:
+    """One image: a row per dataset; left = absolute score shift, right = pairwise accuracy change vs matched baseline."""
+    import matplotlib.pyplot as plt
+
+    colors = {"correct": "#3b6fd4", "wrong": "#d9663a"}
+    fig, axes = plt.subplots(len(datasets), 2, figsize=(14, 4.6 * len(datasets) + 0.6), squeeze=False, sharey="col")
+    for row, (name, (abs_df, pair_df)) in enumerate(datasets.items()):
+        ax1, ax2 = axes[row]
+        styles = [s for s in abs_df["style"].unique() if s != "plain"]
+        x = np.arange(len(styles))
+        for i, side in enumerate(("correct", "wrong")):
+            g = abs_df[abs_df.side == side].set_index("style").reindex(styles)
+            err = [g["shift"] - g["ci_lo"], g["ci_hi"] - g["shift"]]
+            ax1.bar(x + (i - 0.5) * 0.38, g["shift"] * 100, 0.38, yerr=[e * 100 for e in err], color=colors[side],
+                    capsize=3, label=f"{side} answer restyled")
+        ax1.axhline(0, color="#555", lw=0.8)
+        ax1.set_xticks(x, styles, rotation=30, ha="right")
+        ax1.set_ylabel("Change in P(judged correct), points")
+        ax1.set_title(f"{name}: how far Jev's score moves", loc="left", fontsize=11, fontweight="bold")
+
+        both = pair_df[pair_df.order == "both"].copy()
+        both["delta"] = (both["accuracy"] - both["baseline_accuracy"]) * 100
+        styled_right = both[both.wrong_style == "plain"].set_index("correct_style")
+        styled_wrong = both[both.correct_style == "plain"].set_index("wrong_style")
+        d_r = [styled_right["delta"].get(s, np.nan) for s in styles]
+        d_w = [styled_wrong["delta"].get(s, np.nan) for s in styles]
+        ax2.bar(x - 0.19, d_r, 0.38, color=colors["correct"], label="correct answer restyled")
+        ax2.bar(x + 0.19, d_w, 0.38, color=colors["wrong"], label="wrong answer restyled")
+        ax2.axhline(0, color="#555", lw=0.8)
+        ax2.set_xticks(x, styles, rotation=30, ha="right")
+        ax2.set_ylabel("Pairwise accuracy vs plain, points")
+        base = both[(both.correct_style == "plain") & (both.wrong_style == "plain")]["accuracy"].iloc[0] * 100
+        ax2.set_title(f"{name}: picks the correct answer (plain baseline {base:.1f}%)", loc="left", fontsize=11, fontweight="bold")
+
+    fig.suptitle("Does presentation sway Jev as a judge?", fontsize=15, x=0.02, ha="left", fontweight="bold")
+    handles = [plt.Rectangle((0, 0), 1, 1, color=colors[k]) for k in ("correct", "wrong")]
+    fig.legend(handles, ["correct answer restyled", "wrong answer restyled"], loc="lower center", ncol=2, frameon=False)
+    fig.tight_layout(rect=(0, 0.04, 1, 0.96))
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=160)
+    plt.close(fig)
+
+
 def write_summary(abs_df: pd.DataFrame, pair_df: pd.DataFrame, path: str = "results/summary.md") -> None:
     parts = ["# Results summary\n", "## Absolute grading (shift in P(correct) vs plain)\n",
              abs_df.round(3).to_markdown(index=False),

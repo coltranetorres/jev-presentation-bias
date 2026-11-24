@@ -61,3 +61,19 @@ def test_pairwise_summary_baseline_is_matched_to_same_items():
     assert long_both["baseline_accuracy"] == 1.0  # matched to items a,b only, not 4/6
     plain_both = s[(s.wrong_style == "plain") & (s.order == "both")].iloc[0]
     assert abs(plain_both["baseline_accuracy"] - 4 / 6) < 1e-9
+
+
+def test_make_combined_chart_writes_png(tmp_path):
+    abs_df = analyze.absolute_summary(abs_df_fixture())
+    pair_df = analyze.pairwise_summary(pair_df_fixture())
+    out = tmp_path / "c.png"
+    analyze.make_combined_chart({"A (n=4)": (abs_df, pair_df), "B (n=4)": (abs_df, pair_df)}, path=str(out))
+    assert out.exists() and out.stat().st_size > 1000
+
+
+def abs_df_fixture():
+    return abs_df()
+
+
+def pair_df_fixture():
+    return pair_df()

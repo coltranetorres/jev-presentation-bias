@@ -44,3 +44,18 @@ def test_different_fact_check_excludes_variant(monkeypatch, tmp_path):
 def test_exclusions_recorded_not_silently_dropped(monkeypatch, tmp_path):
     res, _ = run(monkeypatch, tmp_path, bad_style="short")
     assert sorted(res["q2"]["excluded"]) == [["correct", "short"], ["wrong", "short"]]
+
+
+def test_plain_that_drifts_from_source_fact_excludes_side(monkeypatch, tmp_path):
+    def fake(prompt, model, system=None, cache_dir=""):
+        if "SAME or DIFFERENT" in prompt:
+            return "DIFFERENT" if "BAD" in prompt else "SAME"
+        if prompt.startswith(styles.STYLE_PROMPTS["plain"].split("{text}")[0]):
+            return "BAD plain" if "Fact to assert: right fact" in prompt else "plain answer"
+        return "rewrite"
+
+    monkeypatch.setattr(styles, "chat", fake)
+    res = styles.build_variants(ITEMS, "rw", "ck", out_path=str(tmp_path / "v.json"))
+    assert res["q1"]["correct"] == {}
+    assert ["correct", "plain"] in res["q1"]["excluded"]
+    assert "plain" in res["q1"]["wrong"]

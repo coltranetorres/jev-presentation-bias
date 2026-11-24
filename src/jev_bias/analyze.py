@@ -32,7 +32,7 @@ def absolute_summary(df: pd.DataFrame) -> pd.DataFrame:
 
 def pairwise_summary(df: pd.DataFrame) -> pd.DataFrame:
     """Per (correct_style, wrong_style, order|both): accuracy (+CI) and flip rate vs the plain/plain baseline."""
-    cols = ["correct_style", "wrong_style", "order", "accuracy", "ci_lo", "ci_hi", "flip_rate", "n"]
+    cols = ["correct_style", "wrong_style", "order", "accuracy", "baseline_accuracy", "ci_lo", "ci_hi", "flip_rate", "n"]
     if df.empty:
         return pd.DataFrame(columns=cols)
     base = (df[(df.correct_style == "plain") & (df.wrong_style == "plain")]
@@ -44,7 +44,7 @@ def pairwise_summary(df: pd.DataFrame) -> pd.DataFrame:
         for order, gg in [*g.groupby("order"), ("both", g)]:
             lo, hi = bootstrap_ci(gg["picked_correct"].astype(float).to_numpy())
             flip = gg["flip"].mean() if gg["base"].notna().any() else float("nan")
-            rows.append((cs, ws, order, gg["picked_correct"].mean(), lo, hi, flip, len(gg)))
+            rows.append((cs, ws, order, gg["picked_correct"].mean(), gg["base"].astype(float).mean(), lo, hi, flip, len(gg)))
     return pd.DataFrame(rows, columns=cols)
 
 

@@ -52,6 +52,17 @@ def _cached(cache_dir: str, payload: dict, fetch):
     return value
 
 
+def _validate_answer(name: str, spec: dict, ans: object) -> None:
+    """Raise RuntimeError unless `ans` has the shape Jev promises for this question type."""
+    ok = isinstance(ans, dict)
+    if ok and spec["type"] == "noul":
+        ok = isinstance(ans.get("noul"), (int, float)) and 0 <= ans["noul"] <= 1
+    elif ok and spec["type"] == "choice":
+        ok = ans.get("choice") in spec["criteria"] and isinstance(ans.get("probabilities"), dict)
+    if not ok:
+        raise RuntimeError(f"invalid Jev answer for {name!r}: {str(ans)[:200]}")
+
+
 def call_jev(state: list, questions: dict, cache_dir: str = "cache/jev") -> dict:
     """Ask Jev typed questions about `state`; returns the response's `answers` dict."""
     payload = {"model": JEV_MODEL, "state": state, "questions": questions}
@@ -61,6 +72,8 @@ def call_jev(state: list, questions: dict, cache_dir: str = "cache/jev") -> dict
         answers = body.get("answers") if isinstance(body, dict) else None
         if not isinstance(answers, dict) or set(answers) != set(questions):
             raise RuntimeError(f"unexpected Jev response shape: {str(body)[:200]}")
+        for name, spec in questions.items():
+            _validate_answer(name, spec, answers[name])
         return answers
 
     return _cached(cache_dir, payload, fetch)

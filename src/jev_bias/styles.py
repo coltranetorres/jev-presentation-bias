@@ -37,9 +37,18 @@ CHECK_PROMPT = (
     "Answer 1:\n{a}\n\nAnswer 2:\n{b}"
 )
 
+SOURCE_CHECK_PROMPT = (
+    "Does the Answer assert the Claim, without contradicting, reversing, or substituting a different claim? "
+    "Harmless elaboration that restates or explains the Claim is fine. "
+    "Reply with exactly one word: SAME or DIFFERENT.\n\nClaim:\n{a}\n\nAnswer:\n{b}"
+)
+
 
 def _build_side(item: Item, side: str, fact: str, rewrite_model: str, check_model: str) -> tuple[dict, list]:
     plain = chat(STYLE_PROMPTS["plain"].format(text=f"Question: {item.question}\nFact to assert: {fact}"), rewrite_model).strip()
+    drift = chat(SOURCE_CHECK_PROMPT.format(a=fact, b=plain), check_model).strip().upper()
+    if not drift.startswith("SAME"):  # plain drifted from the source fact: drop the whole side
+        return {}, [[side, "plain"]]
     variants, excluded = {"plain": plain}, []
     for style in STYLES:
         if style == "plain":

@@ -70,3 +70,20 @@ def test_chat_caches_second_call(monkeypatch, tmp_path):
     assert client.chat("p", "m", cache_dir=str(tmp_path)) == "hi"
     assert client.chat("p", "m", cache_dir=str(tmp_path)) == "hi"
     assert len(calls) == 1
+
+
+def test_call_jev_does_not_cache_invalid_choice(monkeypatch, tmp_path):
+    qs = {"better": {"type": "choice", "instructions": "x", "criteria": {"A": "a", "B": "b"}}}
+    bad = {"answers": {"better": {"type": "choice", "choice": "C", "probabilities": {"C": 1}}}}
+    monkeypatch.setattr(client.requests, "post", lambda *a, **k: FakeResp(200, bad))
+    with pytest.raises(RuntimeError):
+        client.call_jev(["s"], qs, cache_dir=str(tmp_path))
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_call_jev_does_not_cache_noul_missing_value(monkeypatch, tmp_path):
+    bad = {"answers": {"q": {"type": "noul"}}}
+    monkeypatch.setattr(client.requests, "post", lambda *a, **k: FakeResp(200, bad))
+    with pytest.raises(RuntimeError):
+        client.call_jev(["s"], QUESTIONS, cache_dir=str(tmp_path))
+    assert list(tmp_path.iterdir()) == []

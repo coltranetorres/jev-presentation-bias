@@ -18,7 +18,7 @@ _RULES = (
 
 STYLE_PROMPTS: dict[str, str] = {
     "plain": (
-        "Write a plain, neutral one- or two-sentence answer to the question below that asserts exactly "
+        "Write a plain, neutral three-sentence answer (claim, brief explanation, brief wrap-up, with no new facts) to the question below that asserts exactly "
         "the given fact and nothing else. Do not correct the fact even if you think it is false. "
         "Output ONLY the answer.\n\n{text}"
     ),
@@ -28,7 +28,7 @@ STYLE_PROMPTS: dict[str, str] = {
     "short": _RULES + "Rewrite this answer as tersely as possible while keeping every claim:\n\n{text}",
     "confident": _RULES + "Rewrite this answer in an extremely confident, authoritative, emphatic tone (e.g. 'definitely', 'without question'), same claims:\n\n{text}",
     "technical": _RULES + "Rewrite this answer in a formal, technical, expert register with precise terminology, same claims:\n\n{text}",
-    "conversational": _RULES + "Rewrite this answer in a casual, friendly, conversational tone, same claims:\n\n{text}",
+    "conversational": _RULES + "Rewrite this answer as if chatting with a friend: contractions, casual phrasing, a bit of filler like 'honestly' or 'so', same claims:\n\n{text}",
 }
 
 CHECK_PROMPT = (

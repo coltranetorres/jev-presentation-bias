@@ -59,3 +59,36 @@ def test_plain_that_drifts_from_source_fact_excludes_side(monkeypatch, tmp_path)
     assert res["q1"]["correct"] == {}
     assert ["correct", "plain"] in res["q1"]["excluded"]
     assert "plain" in res["q1"]["wrong"]
+
+
+def test_filtered_model_response_excludes_variant_instead_of_crashing(monkeypatch, tmp_path):
+    from jev_bias.client import EmptyChatError
+
+    def fake(prompt, model, system=None, cache_dir=""):
+        if "SAME or DIFFERENT" in prompt:
+            return "SAME"
+        if prompt.startswith(styles.STYLE_PROMPTS["confident"].split("{text}")[0]):
+            raise EmptyChatError("content filter")
+        return "text"
+
+    monkeypatch.setattr(styles, "chat", fake)
+    res = styles.build_variants(ITEMS, "rw", "ck", out_path=str(tmp_path / "v.json"))
+    assert ["correct", "confident"] in res["q1"]["excluded"]
+    assert "confident" not in res["q1"]["correct"] and "plain" in res["q1"]["correct"]
+
+
+def test_filtered_check_response_excludes_variant(monkeypatch, tmp_path):
+    from jev_bias.client import EmptyChatError
+
+    def fake(prompt, model, system=None, cache_dir=""):
+        if "SAME or DIFFERENT" in prompt and "long rewrite" in prompt:
+            raise EmptyChatError("content filter")
+        if "SAME or DIFFERENT" in prompt:
+            return "SAME"
+        if prompt.startswith(styles.STYLE_PROMPTS["long"].split("{text}")[0]):
+            return "long rewrite"
+        return "text"
+
+    monkeypatch.setattr(styles, "chat", fake)
+    res = styles.build_variants(ITEMS, "rw", "ck", out_path=str(tmp_path / "v.json"))
+    assert ["wrong", "long"] in res["q2"]["excluded"]

@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from .client import chat
+from .client import EmptyChatError, chat
 from .data import Item
 from .util import pmap
 
@@ -44,18 +44,26 @@ SOURCE_CHECK_PROMPT = (
 )
 
 
+def _try_chat(prompt: str, model: str) -> str | None:
+    """chat(), but None when the model returned no text (content filter); caller excludes the variant."""
+    try:
+        return chat(prompt, model).strip()
+    except EmptyChatError:
+        return None
+
+
 def _build_side(item: Item, side: str, fact: str, rewrite_model: str, check_model: str) -> tuple[dict, list]:
-    plain = chat(STYLE_PROMPTS["plain"].format(text=f"Question: {item.question}\nFact to assert: {fact}"), rewrite_model).strip()
-    drift = chat(SOURCE_CHECK_PROMPT.format(a=fact, b=plain), check_model).strip().upper()
-    if not drift.startswith("SAME"):  # plain drifted from the source fact: drop the whole side
+    plain = _try_chat(STYLE_PROMPTS["plain"].format(text=f"Question: {item.question}\nFact to assert: {fact}"), rewrite_model)
+    drift = _try_chat(SOURCE_CHECK_PROMPT.format(a=fact, b=plain), check_model) if plain else None
+    if not drift or not drift.upper().startswith("SAME"):  # plain drifted, or a model refused: drop the whole side
         return {}, [[side, "plain"]]
     variants, excluded = {"plain": plain}, []
     for style in STYLES:
         if style == "plain":
             continue
-        text = chat(STYLE_PROMPTS[style].format(text=plain), rewrite_model).strip()
-        verdict = chat(CHECK_PROMPT.format(a=plain, b=text), check_model).strip().upper()
-        if verdict.startswith("SAME"):
+        text = _try_chat(STYLE_PROMPTS[style].format(text=plain), rewrite_model)
+        verdict = _try_chat(CHECK_PROMPT.format(a=plain, b=text), check_model) if text else None
+        if verdict and verdict.upper().startswith("SAME"):
             variants[style] = text
         else:
             excluded.append([side, style])

@@ -87,3 +87,12 @@ def test_call_jev_does_not_cache_noul_missing_value(monkeypatch, tmp_path):
     with pytest.raises(RuntimeError):
         client.call_jev(["s"], QUESTIONS, cache_dir=str(tmp_path))
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("content", [None, "", "   "])
+def test_chat_does_not_cache_empty_content(monkeypatch, tmp_path, content):
+    body = {"choices": [{"message": {"content": content}, "finish_reason": "content_filter"}]}
+    monkeypatch.setattr(client.requests, "post", lambda *a, **k: FakeResp(200, body))
+    with pytest.raises(RuntimeError, match="empty"):
+        client.chat("p", "m", cache_dir=str(tmp_path))
+    assert list(tmp_path.iterdir()) == []

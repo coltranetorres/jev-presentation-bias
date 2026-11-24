@@ -22,6 +22,10 @@ RETRIES = 4
 #   choice: {"type": "choice", "choice": "A", "probabilities": {"A": 1, "B": 0}, "confidence": 1}
 
 
+class EmptyChatError(RuntimeError):
+    """The model returned no text (e.g. a content filter fired)."""
+
+
 def _headers() -> dict:
     key = os.environ["OPENROUTER_API_KEY"]
     return {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
@@ -89,8 +93,11 @@ def chat(prompt: str, model: str, system: str | None = None, cache_dir: str = "c
     def fetch() -> str:
         body = _post_with_retry(CHAT_URL, payload)
         try:
-            return body["choices"][0]["message"]["content"]
+            content = body["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError) as e:
             raise RuntimeError(f"unexpected chat response shape: {str(body)[:200]}") from e
+        if not isinstance(content, str) or not content.strip():
+            raise EmptyChatError(f"empty chat content: {str(body)[:300]}")
+        return content
 
     return _cached(cache_dir, payload, fetch)

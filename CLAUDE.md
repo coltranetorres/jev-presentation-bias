@@ -10,14 +10,14 @@ Plan: `docs/superpowers/plans/2026-11-24-jev-presentation-bias.md`
 - Install: `uv sync`
 - Tests: `uv run pytest`
 - Single test: `uv run pytest tests/test_client.py::test_name -v`
-- Full pipeline: `uv run python run_all.py`
+- Full pipeline: `uv run python run_all.py [truthfulqa|mmlu_pro] [--n N]`
 
 Use `uv` for everything (`uv add <pkg>`, `uv run ...`). Do not use pip or `requirements.txt`.
 
 ## Layout
 
 - `src/jev_bias/`: `client.py` (cached Jev + chat clients), `data.py`, `styles.py`, `absolute.py`, `pairwise.py`, `analyze.py`
-- `results/`: raw CSV/JSON, `chart.png`, `summary.md` (committed)
+- `results/<dataset>/` (truthfulqa, mmlu_pro): raw CSV/JSON, `chart.png`, `summary.md` (committed)
 - `cache/`, `data/`: API response cache and downloaded dataset (git-ignored)
 
 ## Rules
@@ -27,6 +27,6 @@ Use `uv` for everything (`uv add <pkg>`, `uv run ...`). Do not use pip or `requi
 - The decisions endpoint is alpha: `https://openrouter.ai/api/alpha/decisions`. Parse responses strictly and fail loudly on unexpected shapes.
 - Style rewrites must keep facts unchanged. Variants that fail the fact check are excluded and the exclusion count is reported, never silently dropped.
 - Pairwise runs always cover both A/B orders.
-- Never invent numbers in the writeup; every figure comes from `results/summary.md`.
+- Never invent numbers in the writeup; every figure comes from `results/<dataset>/summary.md`.
 - Write the failing test first. Mock network calls in tests (`requests.post` / `chat`); tests must not need the API key.
 - Python: type hints on public functions, small focused modules, no dead code.

@@ -27,3 +27,20 @@ def test_load_items_respects_n(csv_path):
     items = load_items(7, path=csv_path)
     assert len(items) == 7
     assert items[0].correct and items[0].wrong and items[0].qid
+
+
+def test_load_mmlu_pro_pairs_correct_option_with_a_distractor(tmp_path):
+    from jev_bias.data import load_mmlu_pro
+
+    rows = [
+        {"question_id": i, "question": f"q{i}", "options": ["o0", "o1", "o2", "o3"],
+         "answer": "B", "answer_index": 1, "category": cat}
+        for i, cat in enumerate(["law", "law", "math", "history", "physics"])
+    ]
+    p = tmp_path / "m.parquet"
+    pd.DataFrame(rows).to_parquet(p)
+    items = load_mmlu_pro(10, seed=0, path=str(p))
+    assert {i.question for i in items} == {"q0", "q1", "q3"}  # math/physics excluded
+    for it in items:
+        assert it.correct == "o1" and it.wrong in {"o0", "o2", "o3"} and it.qid.startswith("m")
+    assert load_mmlu_pro(10, seed=0, path=str(p)) == items

@@ -1,6 +1,6 @@
 # Does the way an answer is written change how Jev judges it?
 
-**Draft. All numbers come from `results/summary.md` and the CSVs in `results/`.**
+**Draft. All numbers come from `results/truthfulqa/summary.md` and the CSVs beside it.**
 
 ---
 

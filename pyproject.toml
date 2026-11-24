@@ -10,6 +10,7 @@ dependencies = [
     "numpy",
     "matplotlib",
     "tabulate>=0.10.0",
+    "pyarrow>=26.0.1",
 ]
 
 [dependency-groups]

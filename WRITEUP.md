@@ -4,7 +4,7 @@
 
 ---
 
-Can a judge model tell a correct answer from a polished one?
+How well can a judge model tell a correct answer from a polished one?
 
 I used Jev (typesafe/jev-1.14) as an LLM judge on two sets of questions, each with one correct and one wrong answer:
 - TruthfulQA: 80 questions, wrong answers are common misconceptions.

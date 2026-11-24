@@ -44,3 +44,28 @@ def test_load_mmlu_pro_pairs_correct_option_with_a_distractor(tmp_path):
     for it in items:
         assert it.correct == "o1" and it.wrong in {"o0", "o2", "o3"} and it.qid.startswith("m")
     assert load_mmlu_pro(10, seed=0, path=str(p)) == items
+
+
+def _mmlu_parquet(tmp_path):
+    rows = [{"question_id": 1, "question": "q1", "options": ["o0", "o1", "o2", "o3"],
+             "answer": "B", "answer_index": 1, "category": "law"}]
+    p = tmp_path / "m.parquet"
+    pd.DataFrame(rows).to_parquet(p)
+    return str(p)
+
+
+def test_load_mmlu_pro_uses_model_chosen_distractor(monkeypatch, tmp_path):
+    from jev_bias import data
+
+    monkeypatch.setattr(data, "chat", lambda prompt, model, **k: "D")
+    (it,) = data.load_mmlu_pro(5, path=_mmlu_parquet(tmp_path), distractor_model="m")
+    assert it.correct == "o1" and it.wrong == "o3"
+
+
+def test_load_mmlu_pro_falls_back_to_random_on_bad_model_pick(monkeypatch, tmp_path):
+    from jev_bias import data
+
+    for bad in ("B", "Z", "no idea"):  # the correct letter, out of range, unparseable
+        monkeypatch.setattr(data, "chat", lambda prompt, model, _b=bad, **k: _b)
+        (it,) = data.load_mmlu_pro(5, path=_mmlu_parquet(tmp_path), distractor_model="m")
+        assert it.wrong in {"o0", "o2", "o3"}

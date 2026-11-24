@@ -11,7 +11,10 @@ from jev_bias.data import load_items, load_mmlu_pro
 from jev_bias.pairwise import run_pairwise
 from jev_bias.styles import build_variants
 
-LOADERS = {"truthfulqa": load_items, "mmlu_pro": load_mmlu_pro}
+LOADERS = {
+    "truthfulqa": load_items,
+    "mmlu_pro": lambda n, seed: load_mmlu_pro(n, seed, distractor_model="anthropic/claude-sonnet-5.5"),
+}
 REWRITE_MODEL = "anthropic/claude-sonnet-5.5"
 CHECK_MODEL = "anthropic/claude-haiku-5.5"
 

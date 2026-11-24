@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from .client import EmptyChatError, chat
+
 URL = "https://raw.githubusercontent.com/sylinrl/TruthfulQA/main/TruthfulQA.csv"
 
 
@@ -41,8 +43,28 @@ def load_items(n: int = 80, seed: int = 0, path: str = "data/truthfulqa.csv") ->
     ]
 
 
-def load_mmlu_pro(n: int = 80, seed: int = 0, path: str = "data/mmlu_pro.parquet") -> list[Item]:
-    """Correct option vs one randomly chosen distractor, from knowledge-style MMLU-Pro categories."""
+def _tempting_distractor(question: str, opts: list[str], correct_idx: int, model: str) -> int | None:
+    """Ask an LLM (never Jev) for the wrong option most likely to fool an expert; None if the reply is unusable."""
+    letters = "ABCDEFGHIJ"
+    listing = "\n".join(f"{letters[i]}. {o}" for i, o in enumerate(opts))
+    prompt = (f"Question: {question}\n\n{listing}\n\nThe correct answer is {letters[correct_idx]}. "
+              "Which ONE incorrect option is most tempting, the one most likely to fool a knowledgeable person? "
+              "Reply with a single letter only.")
+    try:
+        reply = chat(prompt, model).strip().upper()[:1]
+    except EmptyChatError:
+        return None
+    idx = letters.find(reply) if reply else -1
+    return idx if 0 <= idx < len(opts) and idx != correct_idx else None
+
+
+def load_mmlu_pro(n: int = 80, seed: int = 0, path: str = "data/mmlu_pro.parquet",
+                  distractor_model: str | None = None) -> list[Item]:
+    """Correct option vs a distractor, from knowledge-style MMLU-Pro categories.
+
+    The distractor is the LLM-chosen most tempting wrong option when `distractor_model` is given
+    (falling back to a random one if the reply is unusable), else random.
+    """
     p = Path(path)
     if not p.exists():
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -55,6 +77,8 @@ def load_mmlu_pro(n: int = 80, seed: int = 0, path: str = "data/mmlu_pro.parquet
     for _, r in df.iterrows():
         opts = list(r["options"])
         correct = opts[int(r["answer_index"])]
-        wrong = rng.choice([o for i, o in enumerate(opts) if i != int(r["answer_index"])])
+        ci = int(r["answer_index"])
+        pick = _tempting_distractor(r["question"], opts, ci, distractor_model) if distractor_model else None
+        wrong = opts[pick] if pick is not None else rng.choice([o for i, o in enumerate(opts) if i != ci])
         items.append(Item(f"m{r['question_id']}", r["question"], correct, wrong))
     return items
